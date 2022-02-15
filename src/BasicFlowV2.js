@@ -27,18 +27,16 @@ function parabola(x, k) {
 }
 
 const { MathUtils } = THREE
-const numParticles = 160
+const numParticles = 150
 const particleStopDuration = -20
-const tempColor = new THREE.Color()
-const colors = new Array(numParticles)
-    .fill()
-    .map(() => niceColors[17][Math.floor(Math.random() * 5)])
 
 let particles = []
 let startTime = 0
 let elapsedTime = 0
+let lineWidth = 0.05
+let lineOpacity = 0.4
 let lineColor = new THREE.Color('#412f2f')
-let ballColor = new THREE.Color('#59599d')
+let ballColor = new THREE.Color('#4949e8')
 
 var flowSettings = {
     speed: 0.005,
@@ -50,8 +48,10 @@ var flowSettings = {
     speedVariance: 1,
     scaleVariance: 1,
     lineColor: '#412f2f',
+    lineOpacity: 0.4,
+    lineWidth: 0.05,
     backgroundColor: '#774c6a',
-    ballColor: '#59599d',
+    ballColor: '#4949e8',
     run_animation: function () {
         resetParticles()
     },
@@ -66,6 +66,12 @@ function setupGUI() {
     gui.add(flowSettings, 'baseXVelocity', -0.1, 0.1, 0.01)
     gui.add(flowSettings, 'baseYVelocity', -0.1, 0.1, 0.01)
     gui.add(flowSettings, 'BaseZVelocity', -0.1, 0.1, 0.01)
+    gui.add(flowSettings, 'lineWidth', 0.01, 1.1, 0.01).onChange(() => {
+        lineWidth = flowSettings.lineWidth
+    })
+    gui.add(flowSettings, 'lineOpacity', 0.1, 1, 0.1).onChange(() => {
+        lineOpacity = flowSettings.lineOpacity
+    })
     gui.add(flowSettings, 'playtime', 30, 1000, 1)
     gui.add(flowSettings, 'speedVariance', 1, 10)
     gui.add(flowSettings, 'scaleVariance', 1, 10)
@@ -104,7 +110,7 @@ function resetParticles(xIn, yIn) {
             currentLife: flowSettings.playtime,
             totalLife: flowSettings.playtime,
             baseScale: Math.max(
-                Math.random() * flowSettings.scaleVariance - 0.5,
+                Math.random() * flowSettings.scaleVariance - 0.6,
                 0.25
             ),
             baseSpeed: Math.random() * flowSettings.speedVariance,
@@ -167,16 +173,7 @@ export default function BasicFlowV2() {
 
 function Bubbles() {
     const { camera, mouse, viewport } = useThree()
-    const colorArray = useMemo(
-        () =>
-            Float32Array.from(
-                new Array(1000)
-                    .fill()
-                    .flatMap((_, i) => tempColor.set(colors[i]).toArray())
-            ),
-        []
-    )
-    console.log(colorArray)
+
     const [hovered, set] = useState()
 
     const dummy = useMemo(() => new THREE.Object3D(), [])
@@ -254,12 +251,7 @@ function Bubbles() {
                     metalness={0.25}
                     roughness={0.1}
                 />
-                <sphereBufferGeometry args={[0.3, 10, 10]}>
-                    <instancedBufferAttribute
-                        attachObject={['attributes', 'color']}
-                        args={[colorArray, 3]}
-                    />
-                </sphereBufferGeometry>
+                <sphereBufferGeometry args={[0.3, 10, 10]} />
             </instancedMesh>
 
             {particles.map((p, i) => (
@@ -277,6 +269,9 @@ const Line = ({ index }) => {
     useFrame((state) => {
         const { r, g, b } = lineColor
         meshMatRef.current.uniforms.color.value = { r, g, b }
+        meshMatRef.current.uniforms.lineWidth.value = lineWidth
+        meshMatRef.current.uniforms.opacity.value = lineOpacity
+
         meshMatRef.current.transparent = true
         updateLineCount.current += 1
         if (particles[index].currentLife < particleStopDuration - 10) {
@@ -307,14 +302,14 @@ const Line = ({ index }) => {
                 ref={meshMatRef}
                 attach="material"
                 depthTest={true}
-                lineWidth={0.05}
+                lineWidth={flowSettings.lineWidth}
                 color={flowSettings.lineColor}
                 dashArray={0}
                 dashRatio={0}
                 blending={THREE.AdditiveBlending}
                 useMap={true}
                 map={texMap}
-                opacity={0.3}
+                opacity={flowSettings.lineOpacity}
             />
         </mesh>
     )
